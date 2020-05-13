@@ -1,32 +1,16 @@
 import os
 import base64
-
 from flask import Flask, render_template, request, redirect, url_for, session
-
 from model import SavedTotal
 
 app = Flask(__name__)
-app.secret_key = b'\xb6x(\xd67\x1f\xa7\x15\x92\xf1VqU\xe9|\xbcqu\xac\xf6\x16\xa8\x8f\xe5'
+#app.secret_key = b'\xb6x(\xd67\x1f\xa7\x15\x92\xf1VqU\xe9|\xbcqu\xac\xf6\x16\xa8\x8f\xe5'
+app.secret_key = os.environ.get('SECRET_KEY').encode()
 
 @app.route('/')
 def home():
     return redirect(url_for('add'))
 
-@app.route('/retrieve')
-def retrieve():
-    code = request.args.get('code', None)
-
-    if code is None:
-        return render_template("retrieve.jinja2") 
-    try:
-        saved_total = SavedTotal.get(SavedTotal.code == code)
-    except SavedTotal.DoesNotExist:
-        return render_template("retrieve.jinja2")
-    
-    session['total'] = saved_total.value
-
-    return redirect(url_for('add'))
-    
 
 @app.route('/add', methods=['GET', 'POST'])
 def add():
@@ -37,7 +21,8 @@ def add():
         number = int(request.form['number'])
         session['total'] += number
 
-    return render_template('add.jinja2', session=session)
+    return render_template('add.html', session=session)
+
 
 @app.route('/save', methods=['POST'])
 def save():
@@ -47,7 +32,23 @@ def save():
     saved_total = SavedTotal(value=total, code=code)
     saved_total.save()
 
-    return render_template('save.jinja2', code=code)
+    return render_template('save.html', code=code)
+
+
+@app.route('/retrieve')
+def retrieve():
+    code = request.args.get('code', None)
+
+    if code is None:
+        return render_template("retrieve.html") 
+    try:
+        saved_total = SavedTotal.get(SavedTotal.code == code)
+    except SavedTotal.DoesNotExist:
+        return render_template("retrieve.html")
+    
+    session['total'] = saved_total.value
+
+    return redirect(url_for('add'))
 
 
 if __name__ == "__main__":
